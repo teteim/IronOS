@@ -111,8 +111,8 @@
     "USBPDModeDefault": {
       "displayText": "기본\n모드"
     },
-    "USBPDModeNoDynamic": {
-      "displayText": "동적협상\n해제"
+   "USBPDModeNoDynamic": {
+      "displayText": "스마트충전\n해제"
     },
     "USBPDModeSafe": {
       "displayText": "안전\n모드"
@@ -155,7 +155,7 @@
     },
     "USBPDMode": {
       "displayText": "PD\n모드",
-      "description": "동적협상 해제 시 EPR 및 PPS 비활성화, 안전 모드 선택 시 패딩 저항 미사용"
+      "description": "스마트충전 해제 시 EPR 및 PPS 비활성화, 안전 모드 선택 시 패딩 저항 미사용"
     },
     "BoostTemperature": {
       "displayText": "부스트\n온도",
