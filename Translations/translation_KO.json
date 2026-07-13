@@ -1,0 +1,17 @@
+{
+    "meta": {
+        "language": "Korean",
+        "author": "teteim"
+    },
+"translations": {
+        "Soldering": "납땜시작",
+        "Settings": "설정",
+        "Boost": "부스트",
+        "Sleep": "절전",
+        "Cooling": "냉각중",
+        "Temperature": "온도",
+        "Voltage": "입력전압",
+        "Off": "꺼짐",
+        "On": "켜짐"
+    }
+}
