@@ -416,6 +416,10 @@ def merge_letter_count_info(a: Dict, b: Dict) -> Dict:
     }
 
 
+def get_korean_glyph(sym: str) -> Optional[bytes]:
+    return font_tables.get_font_map_korean().get(sym)
+
+
 def get_cjk_glyph(sym: str) -> Optional[bytes]:
     try:
         glyph: Glyph = cjk_font()[ord(sym)]
@@ -645,7 +649,7 @@ def get_font_map_per_font(
 
     # First we go through and do all of the CJK characters that are in the large font to have them removed
     for sym in text_list_large_font:
-        font12_line = get_cjk_glyph(sym)
+        font12_line = get_cjk_glyph(sym) or get_korean_glyph(sym)
         if font12_line is None:
             continue
         font12_map[sym] = font12_line
