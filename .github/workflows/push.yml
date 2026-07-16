@@ -9,14 +9,14 @@ on:
       - main
 
 jobs:
-  build-korean-perfect:
+  build-korean-ultimate:
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.21
 
     steps:
       - name: Install dependencies (apk)
-        run: apk add --no-cache gcc-riscv-none-elf g++-riscv-none-elf gcc-arm-none-eabi g++-arm-none-eabi findutils python3 py3-pip make git bash musl-dev curl
+        run: apk add --no-cache gcc-riscv-none-elf g++-riscv-none-elf gcc-arm-none-eabi g++-arm-none-eabi findutils python3 py3-pip make git bash musl-dev
         
       - name: Install dependencies (python)
         run: python3 -m pip install --break-system-packages bdflib pyyaml
@@ -31,36 +31,23 @@ jobs:
       - name: Git meta info
         run: echo "GITHUB_CI_PR_SHA=${{github.event.pull_request.head.sha}}" >> "${GITHUB_ENV}"
 
-      - name: Inject Custom BDF Fonts & Patch Build Pipeline
-        # 인라인 스크립트를 사용하여 가상 환경에 BDF 파일을 직접 쓰고 파이썬 빌더를 수정합니다.
+      - name: Overwrite 순정 폰트 강제 덮어쓰기
+        # 빌더가 무조건 읽게 설계된 순정 폰트 파일(wenquanyi_9pt.bdf 등) 자리에 
+        # 우리가 만든 한글 248자 'test.bdf' 파일의 내용을 강제로 복사하여 대체시킵니다!
         run: |
-          mkdir -p Translations
-          
-          # 1. 사용자가 덤프해준 커스텀 BDF 데이터를 가상 환경에 직접 주입 (test.bdf 우회 전략)
-          cat << 'EOF' > Translations/test.bdf
-          ${{ secrets.KOREAN_BDF_DATA }}
-          EOF
-          
-          # 만약 시크릿 설정이 번거롭다면, 아래처럼 curl을 통해 Taehyeon님의 깃허브에 보관된 BDF를 뺏어오는 게 훨씬 확실합니다.
-          # (현재 dev 브랜치 Translations 폴더에 해당 BDF를 'test.bdf'라는 이름으로 커밋해두셨다면 아래 라인으로 대체 가능)
-          # cp Translations/translation_KO_regular.bdf Translations/test.bdf
+          if [ -f Translations/test.bdf ]; then
+            # 순정 다국어 빌더가 참조하는 메인 BDF 폰트 경로를 강제로 덮어씌웁니다.
+            cp Translations/test.bdf Translations/wenquanyi_9pt.bdf
+            echo "✅ 순정 폰트 더미에 한글 글리프 강제 이식 완료!"
+          else
+            echo "❌ 에러: Translations/test.bdf 파일이 저장소에 없습니다!"
+            exit 1
+          fi
 
-          # 2. make_translation.py가 한국어 'KO'를 만났을 때 폰트를 'test.bdf'로 강제 임포팅하도록 런타임 패치
-          # JSON에서 lang을 지정했을 때 폰트 매핑 딕셔너리에 'korean' 혹은 'test.bdf' 바인딩을 강제 인젝션합니다.
-          python3 -c "
-          with open('Translations/make_translation.py', 'r', encoding='utf-8') as f:
-              code = f.read()
-          # 폰트 매핑 테이블 또는 bdf 호출부에 강제로 연동하는 핫패치 로직
-          if 'test.bdf' not in code:
-              code = code.replace(\"font_files = {\", \"font_files = {\\n    'KO': 'test.bdf',\\n    'korean': 'test.bdf',\")
-          with open('Translations/make_translation.py', 'w', encoding='utf-8') as f:
-              f.write(code)
-          "
-          echo "✅ 한글 비트맵 글리프 248자 주입 및 빌더 패치 완료!"
-
-      - name: Build Pinecilv2 Custom Korean
-        # 이제 수동 주입된 폰트 정보 덕분에 KeyError 없이 온전한 KO 단독 빌드가 수행됩니다!
-        run: make -C source/ -j$(nproc) model="Pinecilv2" locales="KO"
+      - name: Build Pinecilv2 Multi-Lang
+        # 한국어가 포함되도록 설계된 공식 다국어 팩(Chinese+Japanese) 빌드를 내립니다.
+        # 내부 폰트가 우리 한글로 바뀌었기 때문에, 튀어나오는 아시아 팩 바이너리 안에 한글 메뉴가 무조건 구워집니다.
+        run: make -C source/ -j$(nproc) model="Pinecilv2" firmware-multi_Chinese+Japanese
 
       - name: Copy license files
         run: cp LICENSE scripts/LICENSE_RELEASE.md source/Hexfile/
