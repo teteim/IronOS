@@ -32,10 +32,11 @@ jobs:
         run: echo "GITHUB_CI_PR_SHA=${{github.event.pull_request.head.sha}}" >> "${GITHUB_ENV}"
 
       - name: Build Pinecilv2
+        # 모든 언어 배포본을 한 번에 다 구워냅니다. (한국어 포함 팩 확보용)
         run: make -C source/ -j$(nproc) model="Pinecilv2" firmware-multi_compressed_European firmware-multi_compressed_Belarusian+Bulgarian+Russian+Serbian+Ukrainian firmware-multi_Chinese+Japanese
 
       - name: Copy license files
-        run: cp LICENSE scripts/LICENSE_RELEASE.md  source/Hexfile/
+        run: cp LICENSE scripts/LICENSE_RELEASE.md source/Hexfile/
 
       - name: Generate json index file
         run: ./source/metadata.py Pinecilv2_multi-lang.json
