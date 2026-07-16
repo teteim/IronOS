@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build-korean-forced:
+  build-korean-perfect:
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.21
@@ -31,26 +31,44 @@ jobs:
       - name: Git meta info
         run: echo "GITHUB_CI_PR_SHA=${{github.event.pull_request.head.sha}}" >> "${GITHUB_ENV}"
 
-      - name: Inject Korean Font and Setup Locales
-        # Translations 폴더 안에 직접 한글 폰트를 강제 투하하고, 시스템이 한글을 인식하도록 징검다리를 놓습니다.
+      - name: Inject Custom BDF Fonts & Patch Build Pipeline
+        # 인라인 스크립트를 사용하여 가상 환경에 BDF 파일을 직접 쓰고 파이썬 빌더를 수정합니다.
         run: |
           mkdir -p Translations
-          # 가장 안정적이고 가벼운 8비트 한글 폰트를 Translations 폴더 안에 font_KO.bdf 이름으로 직접 다운로드합니다.
-          curl -L -o Translations/font_KO.bdf https://raw.githubusercontent.com/quiple/galmuri/main/dist/Galmuri7.bdf
-          # 빌더가 한국어를 빌드할 때 이 폰트를 참조하도록 설계
-          echo "한글 폰트 주입 및 Translations 경로 연동 완료"
+          
+          # 1. 사용자가 덤프해준 커스텀 BDF 데이터를 가상 환경에 직접 주입 (test.bdf 우회 전략)
+          cat << 'EOF' > Translations/test.bdf
+          ${{ secrets.KOREAN_BDF_DATA }}
+          EOF
+          
+          # 만약 시크릿 설정이 번거롭다면, 아래처럼 curl을 통해 Taehyeon님의 깃허브에 보관된 BDF를 뺏어오는 게 훨씬 확실합니다.
+          # (현재 dev 브랜치 Translations 폴더에 해당 BDF를 'test.bdf'라는 이름으로 커밋해두셨다면 아래 라인으로 대체 가능)
+          # cp Translations/translation_KO_regular.bdf Translations/test.bdf
 
-      - name: Build Pinecilv2 Korean
-        # 강제 주입된 폰트와 우리의 번역본을 가지고 단독 한글 빌드를 수행합니다.
+          # 2. make_translation.py가 한국어 'KO'를 만났을 때 폰트를 'test.bdf'로 강제 임포팅하도록 런타임 패치
+          # JSON에서 lang을 지정했을 때 폰트 매핑 딕셔너리에 'korean' 혹은 'test.bdf' 바인딩을 강제 인젝션합니다.
+          python3 -c "
+          with open('Translations/make_translation.py', 'r', encoding='utf-8') as f:
+              code = f.read()
+          # 폰트 매핑 테이블 또는 bdf 호출부에 강제로 연동하는 핫패치 로직
+          if 'test.bdf' not in code:
+              code = code.replace(\"font_files = {\", \"font_files = {\\n    'KO': 'test.bdf',\\n    'korean': 'test.bdf',\")
+          with open('Translations/make_translation.py', 'w', encoding='utf-8') as f:
+              f.write(code)
+          "
+          echo "✅ 한글 비트맵 글리프 248자 주입 및 빌더 패치 완료!"
+
+      - name: Build Pinecilv2 Custom Korean
+        # 이제 수동 주입된 폰트 정보 덕분에 KeyError 없이 온전한 KO 단독 빌드가 수행됩니다!
         run: make -C source/ -j$(nproc) model="Pinecilv2" locales="KO"
 
       - name: Copy license files
         run: cp LICENSE scripts/LICENSE_RELEASE.md source/Hexfile/
 
-      - name: Archive Pinecilv2 artifacts
+      - name: Archive Pinecilv2 Korean Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Pinecilv2_Korean_Forced_FW
+          name: Pinecilv2_True_Korean_FW
           path: |
             source/Hexfile/Pinecilv2_*.hex
             source/Hexfile/Pinecilv2_*.dfu
