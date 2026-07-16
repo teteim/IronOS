@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build_multi-lang:
+  build-korean:
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.21
@@ -31,26 +31,25 @@ jobs:
       - name: Git meta info
         run: echo "GITHUB_CI_PR_SHA=${{github.event.pull_request.head.sha}}" >> "${GITHUB_ENV}"
 
-      - name: Build Pinecilv2
-        # 모든 언어 배포본을 한 번에 다 구워냅니다. (한국어 포함 팩 확보용)
-        run: make -C source/ -j$(nproc) model="Pinecilv2" firmware-multi_compressed_European firmware-multi_compressed_Belarusian+Bulgarian+Russian+Serbian+Ukrainian firmware-multi_Chinese+Japanese
+      - name: Build Pinecilv2 Korean Only
+        # 다른 잡다한 외국어 다 빼고, 오직 한국어(KO)만 포함된 커스텀 빌드 명령입니다!
+        run: make -C source/ -j$(nproc) model="Pinecilv2" locales="KO"
 
       - name: Copy license files
         run: cp LICENSE scripts/LICENSE_RELEASE.md source/Hexfile/
 
       - name: Generate json index file
-        run: ./source/metadata.py Pinecilv2_multi-lang.json
+        run: ./source/metadata.py Pinecilv2_Korean.json
 
       - name: Archive Pinecilv2 artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Pinecilv2_multi-lang
+          name: Pinecilv2_Korean_FW
           path: |
             source/Hexfile/Pinecilv2_*.hex
             source/Hexfile/Pinecilv2_*.dfu
             source/Hexfile/Pinecilv2_*.bin
             source/Hexfile/Pinecilv2_*.elf
-            source/Hexfile/Pinecilv2_multi-lang.json
             source/Hexfile/LICENSE
             source/Hexfile/LICENSE_RELEASE.md
           if-no-files-found: error
