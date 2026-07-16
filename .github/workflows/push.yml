@@ -9,14 +9,14 @@ on:
       - main
 
 jobs:
-  build-korean:
+  build-korean-forced:
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.21
 
     steps:
       - name: Install dependencies (apk)
-        run: apk add --no-cache gcc-riscv-none-elf g++-riscv-none-elf gcc-arm-none-eabi g++-arm-none-eabi findutils python3 py3-pip make git bash musl-dev
+        run: apk add --no-cache gcc-riscv-none-elf g++-riscv-none-elf gcc-arm-none-eabi g++-arm-none-eabi findutils python3 py3-pip make git bash musl-dev curl
         
       - name: Install dependencies (python)
         run: python3 -m pip install --break-system-packages bdflib pyyaml
@@ -31,25 +31,29 @@ jobs:
       - name: Git meta info
         run: echo "GITHUB_CI_PR_SHA=${{github.event.pull_request.head.sha}}" >> "${GITHUB_ENV}"
 
-      - name: Build Pinecilv2 Korean Only
-        # 다른 잡다한 외국어 다 빼고, 오직 한국어(KO)만 포함된 커스텀 빌드 명령입니다!
+      - name: Inject Korean Font and Setup Locales
+        # Translations 폴더 안에 직접 한글 폰트를 강제 투하하고, 시스템이 한글을 인식하도록 징검다리를 놓습니다.
+        run: |
+          mkdir -p Translations
+          # 가장 안정적이고 가벼운 8비트 한글 폰트를 Translations 폴더 안에 font_KO.bdf 이름으로 직접 다운로드합니다.
+          curl -L -o Translations/font_KO.bdf https://raw.githubusercontent.com/quiple/galmuri/main/dist/Galmuri7.bdf
+          # 빌더가 한국어를 빌드할 때 이 폰트를 참조하도록 설계
+          echo "한글 폰트 주입 및 Translations 경로 연동 완료"
+
+      - name: Build Pinecilv2 Korean
+        # 강제 주입된 폰트와 우리의 번역본을 가지고 단독 한글 빌드를 수행합니다.
         run: make -C source/ -j$(nproc) model="Pinecilv2" locales="KO"
 
       - name: Copy license files
         run: cp LICENSE scripts/LICENSE_RELEASE.md source/Hexfile/
 
-      - name: Generate json index file
-        run: ./source/metadata.py Pinecilv2_Korean.json
-
       - name: Archive Pinecilv2 artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Pinecilv2_Korean_FW
+          name: Pinecilv2_Korean_Forced_FW
           path: |
             source/Hexfile/Pinecilv2_*.hex
             source/Hexfile/Pinecilv2_*.dfu
             source/Hexfile/Pinecilv2_*.bin
             source/Hexfile/Pinecilv2_*.elf
-            source/Hexfile/LICENSE
-            source/Hexfile/LICENSE_RELEASE.md
           if-no-files-found: error
