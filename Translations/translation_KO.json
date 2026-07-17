@@ -342,7 +342,7 @@
       "description": "모든 설정을 출고 당시 초기값으로 복원"
     },
     "LanguageSwitch": {
-      "displayText": "Language:  KO    한국어",
+      "displayText": "한국어",
       "description": ""
     },
     "SolderingTipType": {
